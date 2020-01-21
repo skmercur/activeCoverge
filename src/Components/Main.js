@@ -17,7 +17,6 @@ export default class Main extends Component {
     let TotalSells = [];
     let tempProduct = [];
     readXlsxFile(info.file).then(rows => {
-      console.log(rows);
       rows.forEach(row => {
         if (row[10] !== null && row[10] !== "* Salesman") {
           Selsman.push(row[10]);
@@ -69,7 +68,12 @@ export default class Main extends Component {
             if (row[8] === product && row[10] === seller) {
               let qty = row[25];
               let conversion = row[18];
-              k = k + qty / conversion;
+              if (row[26] === "EA" || row[26] === "DS") {
+                k = k + qty / conversion;
+              } else {
+                k = k + (qty / conversion) * conversion;
+              }
+
               tempClient.push(row[1]);
             }
           });
@@ -88,7 +92,7 @@ export default class Main extends Component {
         });
         tempProduct = [];
       });
-      console.log(TempTot);
+
       this.setState({ Total: TempTot });
     });
   };
