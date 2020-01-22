@@ -1,6 +1,10 @@
 import React, { Component } from "react";
-import { Upload, Icon, Layout, Tabs, Table } from "antd";
+import { Upload, Icon, Layout, Tabs, Table, Button } from "antd";
 import readXlsxFile from "read-excel-file";
+import XLSX from "xlsx";
+import ReactExport from "react-export-excel";
+import { ExportToCsv } from "export-to-csv";
+
 import "antd/dist/antd.css";
 export default class Main extends Component {
   constructor(props) {
@@ -61,6 +65,7 @@ export default class Main extends Component {
       let tempProduct = [];
       let TempTot = [];
       let tempClient = [];
+      let Clients = [];
       Selsman.forEach(seller => {
         Products.forEach(product => {
           let k = 0;
@@ -75,16 +80,20 @@ export default class Main extends Component {
               }
 
               tempClient.push(row[1]);
+              Clients.push({ code: row[1], nomDuClient: row[2] });
             }
           });
           tempClient = [...new Set(tempClient)];
+          Clients = [...new Set(Clients)];
           let NbrClient = tempClient.length;
           tempClient = [];
           tempProduct.push({
             produit: product,
             qty: k,
-            ActiveCoverge: NbrClient
+            ActiveCoverge: NbrClient,
+            ListClient: Clients
           });
+          Clients = [];
         });
         TempTot.push({
           Seller: seller,
@@ -101,6 +110,44 @@ export default class Main extends Component {
     let index = temp.findIndex(elem => elem.Seller === key);
     let prod = this.state.Total[index].Product;
     this.setState({ DispProd: prod });
+  };
+  s2ab = s => {
+    var buf = new ArrayBuffer(s.length); //convert s to arrayBuffer
+    var view = new Uint8Array(buf); //create uint8array as viewer
+    for (var i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xff; //convert to octet
+    return buf;
+  };
+  download = (url, name) => {
+    let a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+
+    window.URL.revokeObjectURL(url);
+  };
+  getClient = data => {
+    var today = new Date();
+    var dd = String(today.getDate()).padStart(2, "0");
+    var mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
+    var yyyy = today.getFullYear();
+
+    today = mm + "/" + dd + "/" + yyyy;
+    console.log(data);
+    const options = {
+      fieldSeparator: ",",
+      quoteStrings: '"',
+      decimalSeparator: ".",
+      showLabels: true,
+      showTitle: true,
+      title: data.produit + "/ " + today,
+      useTextFile: false,
+      useBom: true,
+      useKeysAsHeaders: true
+      // headers: ['Column 1', 'Column 2', etc...] <-- Won't work with useKeysAsHeaders present!
+    };
+    const csvExporter = new ExportToCsv(options);
+
+    csvExporter.generateCsv(data.ListClient);
   };
   render() {
     const { Header, Footer, Sider, Content } = Layout;
@@ -153,7 +200,15 @@ export default class Main extends Component {
               <TabPane tab={i} key={i}></TabPane>
             ))}
           </Tabs>
-          <Table columns={columns} dataSource={this.state.DispProd} />
+          <Table
+            columns={columns}
+            dataSource={this.state.DispProd}
+            onRow={record => ({
+              onClick: () => {
+                this.getClient(record);
+              }
+            })}
+          />
         </Layout>
       </>
     );

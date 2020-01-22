@@ -8,10 +8,13 @@
     "@testing-library/user-event": "^7.1.2",
     "antd": "^3.26.7",
     "exceljs": "^3.6.1",
+    "export-to-csv": "^0.2.1",
     "react": "^16.12.0",
     "react-dom": "^16.12.0",
+    "react-export-excel": "^0.5.3",
     "react-scripts": "3.3.0",
-    "read-excel-file": "^4.0.5"
+    "read-excel-file": "^4.0.5",
+    "xlsx": "^0.15.4"
   },
   "scripts": {
     "start": "react-scripts start",
