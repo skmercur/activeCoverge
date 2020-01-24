@@ -12,7 +12,10 @@ export default class Main extends Component {
     this.state = {
       Selsman: [],
       Total: [],
-      DispProd: []
+      DaysToShow: [],
+      DispProd: [],
+      SellerToShow: [],
+      DataToShow: []
     };
   }
   handleFileUpload = async info => {
@@ -20,7 +23,9 @@ export default class Main extends Component {
     let Products = [];
     let TotalSells = [];
     let tempProduct = [];
+    let Days = [];
     readXlsxFile(info.file).then(rows => {
+      console.log(rows);
       rows.forEach(row => {
         if (row[10] !== null && row[10] !== "* Salesman") {
           Selsman.push(row[10]);
@@ -39,6 +44,15 @@ export default class Main extends Component {
       Products.forEach(product => {
         newProd.push({ product: product, qty: 0 });
       });
+
+      rows.forEach(row => {
+        if (row[9] !== null && row[9] !== "Transaction Date") {
+          Days.push(row[9]);
+        }
+      });
+      Days = [...new Set(Days)];
+      this.setState({ DaysToShow: Days });
+      console.log(Days);
       Selsman.forEach(seller => {
         TotalSells.push({
           seller: seller,
@@ -66,41 +80,49 @@ export default class Main extends Component {
       let TempTot = [];
       let tempClient = [];
       let Clients = [];
+      let Daily = [];
       Selsman.forEach(seller => {
-        Products.forEach(product => {
-          let k = 0;
-          rows.forEach(row => {
-            if (row[8] === product && row[10] === seller) {
-              let qty = row[25];
-              let conversion = row[18];
-              if (row[26] === "EA" || row[26] === "DS") {
-                k = k + qty / conversion;
-              } else {
-                k = k + (qty / conversion) * conversion;
-              }
+        Days.forEach(day => {
+          Products.forEach(product => {
+            let k = 0;
+            rows.forEach(row => {
+              if (row[8] === product && row[10] === seller && row[9] === day) {
+                let qty = row[25];
+                let conversion = row[18];
+                if (row[26] === "EA" || row[26] === "DS") {
+                  k = k + qty / conversion;
+                } else {
+                  k = k + (qty / conversion) * conversion;
+                }
 
-              tempClient.push(row[1]);
-              Clients.push({ code: row[1], nomDuClient: row[2] });
-            }
+                tempClient.push(row[1]);
+                Clients.push({ code: row[1], nomDuClient: row[2] });
+              }
+            });
+            tempClient = [...new Set(tempClient)];
+            Clients = [...new Set(Clients)];
+            let NbrClient = tempClient.length;
+            tempClient = [];
+            tempProduct.push({
+              produit: product,
+              qty: k,
+              ActiveCoverge: NbrClient,
+              ListClient: Clients
+            });
+            Clients = [];
           });
-          tempClient = [...new Set(tempClient)];
-          Clients = [...new Set(Clients)];
-          let NbrClient = tempClient.length;
-          tempClient = [];
-          tempProduct.push({
-            produit: product,
-            qty: k,
-            ActiveCoverge: NbrClient,
-            ListClient: Clients
-          });
-          Clients = [];
+          Daily.push({ Day: day, Product: tempProduct });
+
+          tempProduct = [];
         });
         TempTot.push({
           Seller: seller,
-          Product: tempProduct
+          Days: Daily
         });
-        tempProduct = [];
+        Daily = [];
       });
+
+      console.log(TempTot);
 
       this.setState({ Total: TempTot });
     });
@@ -108,22 +130,22 @@ export default class Main extends Component {
   callback = key => {
     let temp = this.state.Total;
     let index = temp.findIndex(elem => elem.Seller === key);
-    let prod = this.state.Total[index].Product;
-    this.setState({ DispProd: prod });
-  };
-  s2ab = s => {
-    var buf = new ArrayBuffer(s.length); //convert s to arrayBuffer
-    var view = new Uint8Array(buf); //create uint8array as viewer
-    for (var i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xff; //convert to octet
-    return buf;
-  };
-  download = (url, name) => {
-    let a = document.createElement("a");
-    a.href = url;
-    a.download = name;
-    a.click();
+    let seller = temp[index].Seller;
+    this.setState({ SellerToShow: seller });
+    console.log(seller);
+    let Days = this.state.Total[index].Days;
 
-    window.URL.revokeObjectURL(url);
+    console.log(Days);
+    this.setState({ DataToShow: Days });
+  };
+
+  callback2 = key => {
+    let temp = this.state.DataToShow;
+    console.log(temp);
+    let index = temp.findIndex(elem => elem.Day === key);
+    let prod = temp[index].Product;
+    this.setState({ DispProd: prod });
+    console.log(index);
   };
   getClient = data => {
     var today = new Date();
@@ -197,6 +219,11 @@ export default class Main extends Component {
           </Content>
           <Tabs defaultActiveKey="1" onChange={this.callback}>
             {this.state.Selsman.map(i => (
+              <TabPane tab={i} key={i}></TabPane>
+            ))}
+          </Tabs>
+          <Tabs defaultActiveKey="1" onChange={this.callback2}>
+            {this.state.DaysToShow.map(i => (
               <TabPane tab={i} key={i}></TabPane>
             ))}
           </Tabs>
