@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 import { Upload, Icon, Layout, Tabs, Table, Button, Modal, Result } from "antd";
-import readXlsxFile from "read-excel-file/node";
+import readXlsxFile from "read-excel-file";
 import { ExportToCsv } from "export-to-csv";
 
 import "antd/dist/antd.css";
@@ -17,9 +17,80 @@ export default class Main extends Component {
       downloadBtn: true,
       TotalDepot: [],
       visible: false,
-      visible2: false
+      visible2: false,
+      visible3: false,
+      univer: [],
+      ActiveCovergeRestant: [],
+      ClientAchteur: [],
+      SelectedProduct: []
     };
   }
+  handleFileUpload2 = async info => {
+    let TempUniver = [];
+    let TempClientRestant = [];
+    let index2 = 0;
+    let finClientRestant = [];
+    readXlsxFile(info.file).then(rows => {
+      console.log(rows);
+      rows.forEach(row => {
+        if (row[1] !== "Customer Code" && row[1] !== null) {
+          TempUniver.push({
+            code: row[1],
+            nomDuClient: row[2],
+            address: row[10]
+          });
+        }
+      });
+      this.setState({ univer: TempUniver });
+
+      let temp = this.state.Total;
+      let index = temp.findIndex(
+        elem => elem.Seller === this.state.SellerToShow
+      );
+
+      temp[index].Days.forEach(seller => {
+        seller.Product.forEach(prod => {
+          index2 = seller.Product.findIndex(
+            elem => elem.produit === this.state.SelectedProduct
+          );
+        });
+        if (seller.Product[index2].ListClient.length > 0) {
+          TempClientRestant.push(seller.Product[index2].ListClient);
+        }
+      });
+      console.log("Calcule");
+      TempClientRestant.forEach(client => {
+        TempUniver.forEach(clientUniver => {
+          let index = client.findIndex(
+            elem => elem.nomDuClient === clientUniver.nomDuClient
+          );
+
+          if (index == -1) {
+            finClientRestant.push(clientUniver);
+          }
+        });
+        console.log(finClientRestant);
+        this.setState({ ActiveCovergeRestant: finClientRestant });
+      });
+
+      const options = {
+        fieldSeparator: ",",
+        quoteStrings: '"',
+        decimalSeparator: ".",
+        showLabels: true,
+        showTitle: true,
+        filename: this.state.SellerToShow + "///" + this.state.SelectedProduct,
+        title: this.state.SelectedProduct,
+        useTextFile: false,
+        useBom: true,
+        useKeysAsHeaders: true
+        // headers: ['Column 1', 'Column 2', etc...] <-- Won't work with useKeysAsHeaders present!
+      };
+      const csvExporter = new ExportToCsv(options);
+
+      csvExporter.generateCsv(this.state.ActiveCovergeRestant);
+    });
+  };
   handleFileUpload = async info => {
     let Selsman = [];
     let Products = [];
@@ -27,9 +98,6 @@ export default class Main extends Component {
     let tempProduct = [];
     this.setState({ visible: true });
     let Days = [];
-    readXlsxFile("%PUBLIC_URL%/EXCEL/adel.xlsx").then(rows => {
-      console.log(rows);
-    });
     readXlsxFile(info.file).then(rows => {
       if (rows[0][0] !== "Document Listing") {
         this.setState({ visible2: true });
@@ -218,7 +286,7 @@ export default class Main extends Component {
       // headers: ['Column 1', 'Column 2', etc...] <-- Won't work with useKeysAsHeaders present!
     };
     const csvExporter = new ExportToCsv(options);
-
+    this.setState({ SelectedProduct: data.produit });
     csvExporter.generateCsv(data.ListClient);
   };
   getActiveCoverge = () => {
@@ -342,6 +410,7 @@ export default class Main extends Component {
             onRow={record => ({
               onClick: () => {
                 this.getClient(record);
+                this.setState({ visible3: true });
               }
             })}
           />
@@ -363,6 +432,32 @@ export default class Main extends Component {
               title="Fichier invalide"
               subTitle="Veuillez ne pas modifier le fichier Document Listing il suffis seulement de autoriser les modification apres le telechargement veuillez contacter Mr Sofiane Khoudour "
             ></Result>
+          </Modal>
+          <Modal
+            title="En cours de Traitement"
+            visible={this.state.visible3}
+            onOk={() => {
+              this.setState({ visible3: false });
+            }}
+            onCancel={() => {
+              this.setState({ visible3: false });
+            }}
+          >
+            <Upload
+              name="file2"
+              onChange={e => {
+                this.handleFileUpload2(e);
+              }}
+              beforeUpload={() => {
+                return false;
+              }}
+              accept=".xlsx"
+            >
+              <Button>
+                <Icon type="upload" /> Selection l'univere du vendeur
+              </Button>
+            </Upload>
+            ,
           </Modal>
         </Layout>
       </>
